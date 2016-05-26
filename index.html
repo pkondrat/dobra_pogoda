@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+
+    <head>
+        <title>Dobra Pogoda</title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="apple-touch-icon" href="images/icon.png"/>  
+        <meta name="apple-mobile-web-app-capable" content="yes" />  
+
+        <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+        <link rel="stylesheet" type="text/css" href="css/stylesheet.css">
+
+        <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+
+        <script type="text/javascript">
+
+
+            var icons = {"clear-day": "B",
+                "clear-night": "C",
+                "rain": "R",
+                "snow": "G",
+                "sleet": "X",
+                "wind": "S",
+                "fog": "N",
+                "cloudy": "Y",
+                "partly-cloudy-day": "H",
+                "partly-cloudy-night": "I"
+            };
+            function loadWeather(city) {
+
+                //console.log(cityCoords);
+                //console.log("{loadWeather()} city:" + city);
+                var latlong = "";
+                $.ajax({
+                    url: " http://nominatim.openstreetmap.org/search?q=" + city.toLowerCase() + ",poland&format=json&addressdetails=1&limit=1",
+                    async: false,
+                    contentType: "application/json; charset=utf-8",
+                    type: "GET",
+                    success: function (json) {
+                        latlong = json[0].lat + "," + json[0].lon;
+                    },
+                    error: function (x, y, z) {
+                        alert(x.responseText + "  " + x.status);
+                    }
+                });
+                var forecastURL = "https://api.forecast.io/forecast/da9c6c1851bd5384d1926c7beb7dca03/" + latlong;
+                $.ajax({
+                    url: forecastURL,
+                    jsonpCallback: 'jsonCallback',
+                    contentType: "application/json",
+                    dataType: 'jsonp',
+                    success: function (json) {
+                        //console.log(json);
+                        var tempCelsius = (json.currently.temperature - 32) * 5 / 9;
+                        $("#current_temp").html(Math.round(tempCelsius) + "&#176;C");
+                        $("#current_summary").html(json.currently.summary);
+                        $("#current_temp").attr("data-icon", icons[json.currently.icon]);
+                    },
+                    error: function (e) {
+                        console.log(e.message);
+                    }
+                });
+            }
+
+
+            function loadCity(city) {
+                $("#location").html(city);
+                if (city.toLowerCase() == "current location") {
+                    if (navigator.geolocation)
+                        navigator.geolocation.getCurrentPosition(loadWeather, loadDefaultCity);
+                    else {
+                        loadDefaultCity();
+                    }
+
+                } else {
+                    loadWeather(city);
+                }
+
+            }
+
+            function loadDefaultCity() {
+                loadCity("Krakow");
+            }
+
+
+
+            
+            function loadCitiesList() {
+                $.get("private/miejscowosci", function (response) {
+                    var lines = response.split("\n");
+                    for (var i = 0, len = lines.length; i < len; i++) {
+                        //console.log(lines[i]);
+                        $("#left-panel ul li:last").after("<li><a href='#' class='city ui-btn ui-btn-icon-right ui-icon-carat-r' data-rel='close'>"+lines[i]+"</a></li>")
+                        
+                    }
+                    $("#left-panel").listview("refresh");
+                });
+            }
+            
+            $(document).ready(function () {
+                loadCity("Krakow");
+
+                loadCitiesList();
+
+
+                $("a.city").bind("click", function () {
+                    loadCity($(this).html());
+                });
+
+            }
+            );
+
+
+
+
+        </script>
+
+
+
+    </head>
+
+    <body>
+
+        <div data-role="page">
+            <div data-role="panel" id="left-panel" data-theme="a">
+                <!-- 
+                    <li><a href="#" class="city" data-rel="close">Current Location</a></li>
+                    <li><a href="#" class="city" data-rel="close">Krakow</a></li>
+                -->
+                <ul data-role="listview" data-filter="true" data-filter-placeholder="Wybierz miasto">
+                <li><a href="#" class="city" data-rel="close">Krakow</a></li>
+                </ul>
+            </div><!-- /panel -->
+
+            <div data-role="header" data-position="fixed" data-theme="a">
+                <h1>Dobra Pogoda</h1>
+                <a href="#left-panel" data-icon="bars" data-role="button"  data-iconpos="notext" data-iconshadow="false">Menu</a>
+            </div>
+            <div data-role="content" class="content" data-theme="a">
+                <h1 id="current_temp" class="icon" data-icon="B">10&#176;C</h1>
+                <p id="current_summary">Partly Cloudy</p>
+                <p id="location">Current Location</p>
+                <div id="cities"></div>
+            </div>
+
+
+        </div>
+
+
+    </body>
+
+</html>
